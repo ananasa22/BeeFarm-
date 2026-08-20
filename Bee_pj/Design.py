@@ -5,7 +5,10 @@ from PIL import Image
 import numpy as np
 import tkinter as tk
 from backend import on_canvas_click,add_random_flowers,update_loop,Flower,add_bee
-
+import json
+import build_info_frame
+import build_main_frame
+import build_settings_frame
 
 app = ctk.CTk()
 app.title("Bee Simulator")
@@ -19,9 +22,16 @@ changed_light=False
 mutevfx=False
 mutemusic=False
 
+honey_mult=1
 
 bold_font = ctk.CTkFont(family="Impact", size=48, weight="bold")
 subtitle_font = ctk.CTkFont(family="Arial", size=10, weight="bold")
+
+def get_honey():
+  with open('Bee_pj/player_data.json') as f:
+    data=json.load(f)
+  return f"{data.get('honey'):.2f}"
+
 
 def mute_vfx():
   global mute_vfx
@@ -359,6 +369,9 @@ def start_game(): #this was a bad idea 8 hours just for the main menu
   )
 
   info_frame.place(relx=0.5, rely=0.09, anchor="center")
+  info_frame.pack_propagate(False) 
+
+  build_info_frame.build_dashboard_panel(info_frame)
 
   mid_frame=ctk.CTkFrame(
     master=app,
@@ -373,43 +386,16 @@ def start_game(): #this was a bad idea 8 hours just for the main menu
   canvas = tk.Canvas(mid_frame, bg="#181819", highlightthickness=0,width=440,height=540)
   canvas.place(relx=0.5, rely=0.5, anchor="center")
 
-  hive_but=ctk.CTkButton(
-    master=canvas,
-    width=100,
-    height=100,
-    corner_radius=25,
-    text="🍯",
-    font=ctk.CTkFont("",size=25),
-    fg_color="#3f1e0a",
-    hover=False,
-    command=mute_music,
-    border_color="#F3B300",
-    border_width=3,
-  )
+  output=build_main_frame.build_mid_frame_panel(mid_frame)
+  hise_cord=output['hive_box_coords']
+  start_cld=output['start_cooldown']
 
-  hive_but.place(x=330,y=0)
-
-  hive_lbl=ctk.CTkLabel(
-    canvas,
-    text="MAIN HIVE",
-    font=ctk.CTkFont(family="Impact", size=8, weight="bold"),
-    text_color="#F3B300",
-    fg_color='#0F0E0A',
-    border_color="#363636",
-    border_width=1,
-    width=50,
-    height=20,
-    corner_radius=8
-  )
-  hive_lbl.place(x=350,y=90)
-
-  update_loop(canvas,2)
+  update_loop(canvas,2,honey_mult)
 
   Flower.master=canvas
   canvas.bind("<Button-1>", on_canvas_click)
 
   mid_frame.place(relx=0.5, rely=0.57, anchor="center")
-  mid_frame.pack_propagate(False)
 
   field_frame=ctk.CTkFrame(
     master=app,
@@ -422,6 +408,8 @@ def start_game(): #this was a bad idea 8 hours just for the main menu
   )
 
   field_frame.place(relx=0.86, rely=0.16, anchor="center")
+  build_settings_frame.build_nest_control_panel(field_frame,mid_frame)
+  
 
   loot_frame=ctk.CTkFrame(
     master=app,
@@ -521,7 +509,7 @@ def start_game(): #this was a bad idea 8 hours just for the main menu
     border_color='#363636',
     border_width=1,
     anchor='nw',
-    command=add_bee
+    command=lambda: add_bee(hise_cord[0],hise_cord[1])
   )
     
     main_button.place(relx=0.4, rely=0.5, anchor="center")

@@ -4,6 +4,7 @@ import tkinter as tk
 import customtkinter as ctk
 from PIL import Image
 import time
+import json
 
 last_time=0
 Cooldown=5
@@ -42,7 +43,7 @@ class Vector2D:
         return Vector2D(0, 0)
 
 class Bee:
-    def __init__(self, x, y):
+    def __init__(self, x, y,):
         self.pos = Vector2D(x, y)
         self.vel = Vector2D(random.uniform(-1, 1), random.uniform(-1, 1))
         self.acc = Vector2D(0, 0)
@@ -51,9 +52,10 @@ class Bee:
         self.label=None
         
         self.nectar = 0
+        self.honey=0
         self.max_nectar = 10
         self.state = "SEARCHING" 
-        self.unload_timer = 0  # Pause timer for hive stop
+        self.unload_timer = 0  
 
     def seek(self, target_pos):
         desired = target_pos.sub(self.pos).normalize().mult(self.max_speed)
@@ -63,7 +65,7 @@ class Bee:
             steer = steer.normalize().mult(self.max_force)
         return steer
 
-    def update(self, hive_pos, flowers, app):
+    def update(self, hive_pos, flowers,honey_mult):
         if self.nectar >= self.max_nectar and self.state != "UNLOADING":
             self.state = "RETURNING"
 
@@ -71,8 +73,14 @@ class Bee:
             dist_to_hive = self.pos.sub(hive_pos).magnitude()
             if dist_to_hive < 15:
                 self.state = "UNLOADING"
-                self.unload_timer = 15  
+                self.unload_timer = 15 
+                self.honey = self.honey+self.nectar * honey_mult
                 self.nectar = 0
+                with open('Bee_pj/player_data.json') as f:
+                    data = json.load(f)
+                    data['honey'] = self.honey
+                with open('Bee_pj/player_data.json','w') as f:
+                    data = json.dump(data, f, indent=2)
                 self.vel = Vector2D(0, 0)
                 self.acc = Vector2D(0, 0)
             else:
@@ -115,6 +123,11 @@ class Bee:
                 self.target_flower.nectar -= 0.1
                 self.acc = Vector2D(0, 0)
                 self.vel = Vector2D(0, 0)
+                with open('Bee_pj/player_data.json') as f:
+                    data=json.load(f)
+                    data['nectar']=self.nectar
+                with open('Bee_pj/player_data.json','w') as f:
+                    data=json.dump(data,f,indent=2)
             else:
                 self.state = "SEARCHING"
 
@@ -128,9 +141,16 @@ class Bee:
 flowers=[]
 bees=[]
 
-def add_bee():
-    bee= Bee(350,90)
+def add_bee(x,y):
+    bee= Bee(x,y)
     bees.append(bee)
+    with open('Bee_pj/player_data.json') as f:
+        data=json.load(f)
+    data['bees']=len(bees)
+    with open('Bee_pj/player_data.json','w') as f:
+        data=json.dump(data,f,indent=2)
+    
+    
 
 
 def on_canvas_click(event):
@@ -161,12 +181,13 @@ def add_random_flowers():
         f.label.place(x=x,y=y)
         flowers.append(f)
 
-def update_loop(master,speed_val):
+def update_loop(master,speed_val,honey_mult):
+    
     
     for i, bee in enumerate(bees):
         bee.max_speed = speed_val
 
-        bee.update(Vector2D(350,90), flowers,master)
+        bee.update(Vector2D(350,90),flowers,honey_mult)
 
         x, y = bee.pos.x, bee.pos.y
         if bee.label:
@@ -182,7 +203,7 @@ def update_loop(master,speed_val):
             f.label.destroy()
             flowers.remove(f)
 
-    master.after(33, update_loop,master,speed_val)
+    master.after(33, update_loop,master,speed_val,honey_mult)
 
 class Flower:
     def __init__(self, x, y,rarity):
@@ -198,3 +219,4 @@ class Flower:
 
         flower_lbl=ctk.CTkLabel(self.master,image=flower_img,text='',fg_color='#181819')
         self.label=flower_lbl
+
